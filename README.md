@@ -1,23 +1,23 @@
-# `ProgenesisLFQ`
+# `QuantifyR`
 
-> [**Tutorial**](https://hickslab.github.io/ProgenesisLFQ/)
+## Instructions
 
-## Instructions:
-
-1. Read the `ProgenesisLFQ` tutorial.
+1. [Read the `QuantifyR` tutorial](https://hickslab.github.io/QuantifyR/)
 2. Collect the required data.
 3. Download a workflow based on the experiment.
 4. Find and update sections marked by `???` in the workflow.
 
-## Required:
+## Required
 
 |Experiment|Peptide Measurements|Protein Measurements|Database|
 |:-:|:-:|:-:|:-:|
-|Global||X||
-|PTM|X|X|X|
+|Global||[X](https://raw.githubusercontent.com/hickslab/QuantifyR/master/data/20180502_WOS52_Cr_UPS_protm.csv)||
+|PTM|[X](https://raw.githubusercontent.com/hickslab/QuantifyR/master/data/20190123_EWM_AZD1_R_rank-lessthan11-include_uniprot_pepm.csv)|[X](https://raw.githubusercontent.com/hickslab/QuantifyR/master/data/20190123_EWM_AZD1_R_rank-lessthan11-include_uniprot_protm.csv)|[X](https://raw.githubusercontent.com/hickslab/QuantifyR/master/data/Cr_uniprot_crap_20190130.fasta)|
 
-## Workflow:
+## Workflow
 
+### LFQ:
 * [Global](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/ProteinLFQ.R)
+* [OxRAC](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R)
 * [Phosphorylation](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/PhosphoLFQ.R)
-* [Redox](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R)
+
