@@ -1,0 +1,602 @@
+---
+title: "QuantifyR"
+output:
+  html_document:
+    theme: journal
+    highlight: pygments
+    df_print: paged
+    toc: true
+    toc_float:
+      collapsed: false
+    number_sections: true
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
+    
+---
+
+
+```{r setup, include = FALSE}
+require(knitr)
+opts_chunk$set(echo = TRUE)
+opts_knit$set(root.dir = "~/ProgenesisLFQ/data")
+
+```
+
+
+# Process
+
+
+## Global
+> Protein-Level Label-Free Quantification
+
+
+### Packages
+> Load required packages into R session.
+
+```{r, warning = FALSE, message = FALSE}
+library(devtools)
+library(tidyverse)
+
+```
+
+
+### Workflow
+> Load Protein Measurements spreadsheet exported from Progenesis.
+
+```{r warning = FALSE}
+protm <- "20180502_WOS52_Cr_UPS_protm.csv" %>%
+  read_csv(., skip = 2, col_types = cols())
+
+```
+
+> Separate leading protein accession from group members.
+
+* Some protein accessions were grouped together by semicolons (;) in the data. These groups represent homologous proteins with shared peptide identifications. The first accession in each group is generally the most confident inference and is used for analysis, other accessions are considered group members.
+
+```{r}
+protm <- protm %>%
+  separate(Accession,
+           into = c("Accession", "Group members"),
+           sep = ";",
+           extra = "merge",
+           fill = "right")
+
+protm
+
+```
+
+> Define column indeces for the normalized abundance values.
+
+* The Protein Measurements export from Progenesis contains the normalized and raw abundances for each raw file in the experiment.
+
+```{r}
+protm %>% names()
+
+```
+
+```{r}
+samples <- 11:22
+
+samples
+
+```
+
+> Filter to remove proteins from the contaminant database. 
+
+> Filter to remove proteins if not enough peptide evidence.
+
+* Proteins are identified by unique and shared PSMs, so usually the confidence in our protein identification is greatest with increasing unique peptides. It is common in proteomics to remove "one-hit-wonders" by requiring > 1 unique peptide per protein.
+
+> Select the identifier and abundance columns.
+
+```{r}
+data <- protm %>%
+  filter(Description != "cRAP") %>%
+  filter(`Peptide count` >= 2 & `Unique peptides` >= 1) %>%
+  select(Accession, samples) %>%
+  data.frame()
+
+data
+
+```
+
+
+## PTM
+
+> Phosphosite-Level Label-Free Quantification
+
+* During raw MS file processing, Progenesis subdivided each LC-MS run into peak features, which are MS1 precursor ions with a defined isotopic cluster with characteristic retention time and monoisotopic mass. The same peak feature coordinates are assigned for every LC-MS run and the summed intensity (abundance) from each is recorded.
+
+* MS2 spectra from data-dependent acquisition (DDA) contain the associated MS1 precursor ion mass and retention time, allowing them to be mapped to peak features.
+
+* The Peptide Measurements export from Progenesis contains the normalized abundances, raw abundances, and spectral counts for each identified peptide that was mapped to a MS1 peak feature in each raw file.
+
+
+### Packages
+> Load required packages into R session.
+
+```{r, warning = FALSE, message = FALSE}
+library(Biostrings)
+library(devtools)
+library(tidyverse)
+
+```
+
+
+### Functions
+
+```{r}
+url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+source_url(paste0(url, "R/ProcessLFQ.R"))
+
+```
+
+
+### Workflow
+
+> Load Peptide Measurements spreadsheet exported from Progenesis.
+
+```{r warning = FALSE}
+pepm <- "20190715_EWM_TOR1_Phospho_pepm.csv" %>%
+  read_csv(., skip = 2, col_types = cols())
+
+pepm
+
+```
+
+
+> Load Protein Measurements spreadsheet exported from Progenesis.
+
+```{r warning = FALSE}
+protm <- "20190715_EWM_TOR1_Phospho_protm.csv" %>%
+  read_csv(., skip = 2, col_types = cols()) %>%
+  select(1:4) %>%
+  separate_rows(., Accession, sep = ";")
+
+protm
+
+```
+
+
+> Load protein sequence database.
+
+```{r}
+database <- "Cr_uniprot_crap_20190130.fasta" %>%
+  readAAStringSet(.)
+
+names(database) <- str_split(names(database), " ", simplify = TRUE)[, 1]
+
+database
+
+```
+
+> Define column indeces for the normalized abundance values.
+
+```{r}
+pepm %>% names()
+
+```
+
+```{r}
+samples <- 19:34
+
+samples
+
+```
+
+
+> Filter to keep peptides with Percolator-adjusted Mascot scores > 13.
+
+> Filter to remove peptides from proteins in the contaminant database.
+
+> Join the protein identification statistics onto the Peptide Measurement data.
+
+* Each peptide was assigned to a single protein accession, which will have identification statistics in the Protein Measurements export file.
+
+> Summarize duplicate peak features.
+
+* Some features were matched with peptides having identical sequence, modifications, and score, but alternate protein accessions. These groups were reduced to satisfy the principle of parsimony and represented by the protein accession with the highest number of unique peptides, else the protein with the largest confidence score assigned by Progenesis.
+    
+* Some features were duplicated with differing peptide identifications and were reduced to a single peptide with the highest Mascot ion score.
+
+> Filter to keep only modified peptides.
+
+* The pattern is mutable depending on what variable modifications were included for the database search.
+
+* The default case is "Phospho" to specify phosphorylation from a Mascot database search. Able to change to "Phospho (ST)" or "Phospho (Y)" to specify modified residues.
+
+> Build an identifier term.
+
+* The protein accession is concatenated with the particular residue and position in the protein sequence of any modifications identified on the peptide.
+
+> Summarize duplicate identifiers.
+
+* The dataset was then reduced to unique identifiers by summing the abundance of all contributing features (*i.e.*, peptide charge states, missed cleavages, and combinations of additional variable modifications).
+
+* Each identifier group was represented by the peptide with the highest Mascot score in the final dataset.
+
+> Simplify the data format.
+
+* Select the identifier and abundance columns to simplify in downstream processing.
+
+```{r}
+data <- pepm %>%
+  filter(Score > 13) %>%
+  filter(Description != "cRAP") %>%
+  left_join(., protm, by = "Accession") %>%
+  reduce_features() %>%
+  filter(str_detect(Modifications, "Phospho")) %>%
+  get_identifier(., database, mod = "Phospho") %>%
+  reduce_identifiers(., samples) %>%
+  select(Identifier, samples) %>%
+  data.frame()
+
+data
+
+```
+
+
+# Analyze
+
+## Packages
+> Load required packages into R session.
+
+```{r, warning = FALSE, message = FALSE}
+library(imp4p)
+library(broom)
+
+```
+
+
+## Functions
+
+```{r}
+url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+source_url(paste0(url, "R/StatLFQ.R"))
+
+```
+
+
+## Workflow
+
+> Define input data.
+
+```{r}
+data <- "20180502_WOS52_Cr_UPS_protm_processed.csv" %>%
+  read_csv(., col_types = cols()) %>%
+  data.frame()
+
+```
+
+
+> Define the column indeces for replicates in each condition.
+
+* Assuming input data has simplified format of an identifier column followed by abundance columns for each raw file in the experiment.
+
+```{r}
+a <- 2:5; b <- 6:9; c <- 10:13 # ???
+
+group <- list("25" = a, "50" = b, "100" = c) # ???
+
+group.compare <- list("25-50" = list(a, b), # ???
+                      "25-100" = list(a, c),
+                      "50-100" = list(b, c))
+
+a
+b
+c
+group
+group.compare
+
+```
+
+
+> Rename the abundance columns in a simplified "Condition-Replicate" format.
+
+```{r}
+data <- data %>%
+  rename_columns(., group)
+
+data %>% names()
+
+```
+
+
+> Filter to keep identifiers with >50% of replicates having nonzero abundances in any condition.
+
+> Perform a log~2~-transformation of abundances as a variance-stabilization.
+
+* The base R function *log2()* returns "-Inf" for zero values. These instances are changed to "NA" following the transformation.
+
+> Impute missing values ("NA") using a conditional strategy with the `imp4p` package.
+
+* Iterate by condition and check if each idenfifier has reliable quantitation.
+
+* If at least one replicate has a nonzero abundance, impute other replicates with values drawn from a normal distribution centered on the mean of nonzero replicates.
+
+* If all replicates have nonzero abundance, impute with small values drawn from a normal distribution centered on the lower 25^th^ percentile of abundances. 
+
+```{r}
+data2 <- data %>%
+  clean_min(., group, nonzero = 3) %>%
+  transform_data(., group, method = "log2") %>%
+  impute_imp4p(., group)
+
+```
+
+
+### Pairwise *t*-test
+
+> Perform a *t*-test on each identifier for defined condition pairs.
+
+* By default, a two-sided, equal-variance *t*-test is run with Benjamini-Hochberg FDR correction.
+
+```{r}
+data3 <- data2 %>%
+  calculate_ttest(., group.compare, fdr = TRUE)
+
+```
+
+
+### One-way ANOVA
+
+> Perform a one-way analysis of variance (ANOVA) on each identifier across conditions.
+
+* By default, a one-way ANOVA is run for all unique conditions with Benjamini-Hochberg FDR correction.
+
+```{r}
+data4 <- data2 %>%
+  calculate_1anova()
+
+```
+
+
+### Fold change
+
+> Calculate fold change using the mean replicate abundance for each condition.
+
+* Subtracting log~2~-transformed values is equivalent to dividing the non-transformed values and then transforming: $log~2~(B) - log~2~(A) = log~2~(B/A)$
+
+```{r}
+data3 <- data3 %>%
+  calculate_fc(., group.compare, difference = TRUE) %>%
+  add_fc_max()
+
+
+data4 <- data4 %>%
+  calculate_fc(., group.compare, difference = TRUE) %>%
+  add_fc_max()
+
+```
+
+
+### Clustering
+
+> Unsupervised heirarchical clustering.
+
+```{r}
+data4 <- data4 %>%
+  filter(FDR < 0.05) %>%
+  
+  calculate_hclust(., group, k = 2) %>%
+  left_join(data4, ., by = data4 %>% names()[1])
+
+```
+
+
+# Annotate
+
+## Packages
+> Load required packages into R session.
+
+```{r, warning = FALSE, message = FALSE}
+
+
+```
+
+
+## Functions
+
+```{r}
+url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+source_url(paste0(url, "R/AnnotateLFQ.R"))
+
+```
+
+
+## Annotation
+
+> Given a list of protein accessions, access UniProt and pull known information.
+
+```{r eval = FALSE}
+data5 <- data4 %>%
+  add_missingness(., data, group)
+  #keep_entry_uniprot() %>%
+  #split_identifier() %>%
+  #add_uniprot(., paste0(url, "data/Cr_uniprot_20190130_annotation.tsv"))
+
+```
+
+
+# Plot
+
+## Packages
+> Load required packages into R session.
+
+```{r, warning = FALSE, message = FALSE}
+
+
+```
+
+
+## Functions
+
+```{r}
+url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+source_url(paste0(url, "R/PlotLFQ.R"))
+
+```
+
+
+## Theme
+
+> Define custom plotting elements to create a theme.
+
+```{r}
+theme_custom <- function(base_size = 32){
+  theme_bw(base_size = base_size) %+replace%
+    theme(
+      strip.background = element_blank(),
+      axis.ticks =  element_line(colour = "black"),
+      panel.background = element_blank(),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(), 
+      plot.background = element_blank(),
+      plot.margin = unit(c(0.5,  0.5, 0.5, 0.5), "lines"),
+      axis.line.x = element_line(color="black", size = 1),
+      axis.line.y = element_line(color="black", size = 1)
+    )
+}
+
+```
+
+
+## Example
+
+> Custom plot function.
+
+```{r}
+plot_jitter <- function(df, group){
+  temp.df <- df %>%
+    select(1, group %>% flatten_int()) %>%
+    gather(sample, abundance, -1)
+  
+  temp.df %>%  
+    ggplot(., aes(x = sample, y = abundance, color = sample)) +
+    geom_jitter(alpha = 0.5) +
+    geom_boxplot(color = "black",
+                 fill = NA,
+                 outlier.shape = NA,
+                 size = 1.5) +
+    guides(color = FALSE, fill = FALSE) +
+    coord_flip()
+
+}
+
+data2 %>%
+  plot_jitter(., group) +
+  theme_custom()
+
+```
+
+## PCA
+
+> Principal component analysis (PCA).
+
+```{r}
+data2 %>%
+  plot_pca(., group) +
+  theme_custom()
+
+```
+
+
+## Volcano Plot
+
+> Biological versus statistical significance.
+
+```{r}
+data3 %>%
+    plot_volcano(.,
+                 group,
+                 group.compare,
+                 fdr = TRUE,
+                 threshold = 2,
+                 xlimit = 8,
+                 ylimit = 5) +
+  theme_custom()
+
+```
+
+
+## Trend Profiles
+
+> Visualization of results from heirarchical clustering.
+
+```{r}
+data4 %>%
+  filter(FDR < 0.05) %>%
+  #filter(abs(`0-60_FC`) >= 1) %>%
+  #filter(abs(FC_max) >= 1) %>%
+  
+  plot_hclust(., group, k = 2) +
+  theme_custom()
+
+```
+
+
+## Pathway Analysis
+
+> Assuming data contains mapped UniProt annotations.
+
+```{r eval = FALSE}
+data5 %>%
+  filter(FDR < 0.05) %>%
+  #filter(abs(`0-60_FC`) >= 1) %>%
+  #filter(cluster == "A") %>%
+  #sample_n(., 1000, replace = FALSE) %>%
+  
+  plot_GO(top = 5) + theme_custom()
+
+
+data5 %>%
+  filter(FDR < 0.05) %>%
+  filter(`0-60_FC` >= 1) %>%
+  #filter(cluster == "A") %>%
+  plot_GO_hclust(., group, column = "Gene ontology (biological process)", threshold = 3) +
+  #plot_GO_FC(., group, column = "Gene ontology (biological process)", threshold = 1) +
+  theme_custom()
+  
+
+```
+
+
+
+# Output
+
+## Dataframes
+
+> The *write_csv()* function from the `readr` package in `tidyverse` is one option to save a dataframe copy in the working directory.
+
+```{r}
+#data5 %>% write_csv(., "data5.csv")
+
+```
+
+
+## Plots
+
+> Consistent plot size/resolution.
+
+```{r}
+#pdf("figure.pdf", width = 10, height = 10)
+
+#png("figure.png", width = 12, height = 9, units = "in", res = 600)
+# RUN PLOT
+#dev.off()
+
+# TODO plot_save()
+
+```
+
+
+# Session
+
+```{r}
+sessionInfo()
+
+```
+
