@@ -20,7 +20,7 @@ output:
 ```{r setup, include = FALSE}
 require(knitr)
 opts_chunk$set(echo = TRUE)
-opts_knit$set(root.dir = "~/ProgenesisLFQ/data")
+opts_knit$set(root.dir = "~/QuantifyR/data")
 
 ```
 
@@ -128,8 +128,8 @@ library(tidyverse)
 ### Functions
 
 ```{r}
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
-source_url(paste0(url, "R/ProcessLFQ.R"))
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
+source_url(paste0(url, "R/Process.R"))
 
 ```
 
@@ -253,8 +253,8 @@ library(broom)
 ## Functions
 
 ```{r}
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
-source_url(paste0(url, "R/StatLFQ.R"))
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
+source_url(paste0(url, "R/Analyze.R"))
 
 ```
 
@@ -376,7 +376,7 @@ data4 <- data4 %>%
 
 > Unsupervised heirarchical clustering.
 
-```{r}
+```{r, eval = FALSE}
 data4 <- data4 %>%
   filter(FDR < 0.05) %>%
   
@@ -400,8 +400,8 @@ data4 <- data4 %>%
 ## Functions
 
 ```{r}
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
-source_url(paste0(url, "R/AnnotateLFQ.R"))
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
+source_url(paste0(url, "R/Annotate.R"))
 
 ```
 
@@ -434,8 +434,8 @@ data5 <- data4 %>%
 ## Functions
 
 ```{r}
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
-source_url(paste0(url, "R/PlotLFQ.R"))
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
+source_url(paste0(url, "R/Plot.R"))
 
 ```
 
@@ -581,14 +581,18 @@ data5 %>%
 
 > Consistent plot size/resolution.
 
-```{r}
-#pdf("figure.pdf", width = 10, height = 10)
-
-#png("figure.png", width = 12, height = 9, units = "in", res = 600)
-# RUN PLOT
-#dev.off()
-
-# TODO plot_save()
+```{r, eval = FALSE}
+plot_save <- function(p, dpi = 300){
+  # Initialize image file
+  png("figure.png", width = 12, height = 9, units = "in", res = dpi)
+  
+  # Write plot to file
+  print(p)
+  
+  # Close file
+  dev.off()
+  
+}
 
 ```
 
