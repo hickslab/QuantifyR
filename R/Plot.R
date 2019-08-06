@@ -571,10 +571,13 @@ plot_2venn <- function(df){
 
 
 plot_save <- function(p, dpi = 300){
+  # Initialize image file
   png("figure.png", width = 12, height = 9, units = "in", res = dpi)
   
+  # Write plot to file
   print(p)
   
+  # Close file
   dev.off()
   
 }

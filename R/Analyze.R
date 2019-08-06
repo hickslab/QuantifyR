@@ -49,7 +49,7 @@ clean_min <- function(data, group = group, nonzero = 3){
 }
 
 
-transform_data <- function(data, group = group, method = "log2"){
+transform_data <- function(data, group, method = "log2"){
   if (method == "log2"){
     data[, unlist(group)] <- log2(data[, unlist(group)])
     data[, unlist(group)][data[, unlist(group)] == -Inf] <- 0
@@ -63,13 +63,7 @@ transform_data <- function(data, group = group, method = "log2"){
 }
 
 
-normalize_data <- function(data){
-  # Would this help following data reduction/filtering?
-  
-}
-
-
-impute_imp4p <- function(data, group = group){
+impute_imp4p <- function(data, group){
   # Set RNG state
   set.seed(123)
   
@@ -100,95 +94,7 @@ impute_imp4p <- function(data, group = group){
 }
 
 
-impute_norm <- function(df, group){
-  # Check data type
-  variable <- df %>%
-    select(1) %>%
-    names()
-  
-  
-  df %>%
-    gather(condition, abundance, -variable)
-  
-}
-
-
-calculate_ttest <- function(data2, group.compare, fdr = TRUE){
-  # @TODO
-  
-  # Dataframe with only variable column to build upon
-  #temp.data <- data %>%
-  #  select(1)
-  
-  #for (x in group.compare){
-  #data %>%
-  #  select(unlist(x)) %>%
-  #  rownames_to_column() %>%
-  #  gather(sample, abundance, -rowname) %>%
-  #  mutate(cond = str_sub(sample, start = 1, end = 1)) %>%
-  #  group_by(rowname) %>%
-  #  mutate(p = t.test(abundance, alternative = "two.sided", var.equal = TRUE)$p.value)
-  
-  # @TODO: allow FDR toggle on/off
-  
-  
-  for (x in group.compare){
-    # Row-wise t-test
-    p.ttest <- c()
-    for (i in 1:nrow(data2)){
-      row <- data2[i, ]
-      
-      ttest.out <- t.test(row[, x[[1]]],
-                          row[, x[[2]]],
-                          alternative = "two.sided",
-                          var.equal = TRUE)
-      
-      p.ttest[i] <- ttest.out$p.value
-      
-    }
-    
-    if (fdr == TRUE){
-      # Benjamini-Hochberg FDR correction
-      p.ttest <- p.adjust(p.ttest, method = "BH", n = length(p.ttest))
-      
-    }
-    # Add to dataframe
-    data2 <- cbind(data2, temp.name = p.ttest)
-    
-    
-    # Column name defined by group.compare variable and 'get_design' nomenclature
-    temp1 <- data2 %>%
-      select(x[[1]][1]) %>%
-      names() %>%
-      #str_sub(., start = 1, end = 1)
-      str_split(., "-", 2) %>% .[[1]] %>% .[1]
-      
-    temp2 <- data2 %>%
-      select(x[[2]][1]) %>%
-      names() %>%
-      #str_sub(., start = 1, end = 1)
-      str_split(., "-", 2) %>% .[[1]] %>% .[1]
-    
-    if (fdr == TRUE){
-      #temp.name <- paste(temp1, temp2, "_FDR", sep = "-")
-      temp.name <- paste(temp1, temp2, sep = "-") %>% paste(., "FDR", sep = "_")
-      
-    } else {
-      #temp.name <- paste(temp1, temp2, "_P", sep = "-")
-      temp.name <- paste(temp1, temp2, sep = "-") %>% paste(., "P", sep = "_")
-      
-    }
-    
-    # Rename appended column with dynamic variable
-    names(data2)[names(data2) == "temp.name"] <- temp.name
-    
-  }
-  return(data2)
-  
-}
-
-
-calculate_ttest2 <- function(df, group.compare){
+calculate_ttest <- function(df, group.compare){
   # Check data type
   variable <- df %>%
     select(1) %>%
@@ -204,7 +110,7 @@ calculate_ttest2 <- function(df, group.compare){
       select(1, group.compare[[i]] %>% flatten_int()) %>%
       gather(condition, abundance, -1) %>%
       separate(condition, into = c("condition", "replicate"), sep = "-") %>%
-      group_by_(variable)
+      group_by(!!as.name(variable))
     
     # Nest and test
     temp.data <- temp.data %>%
@@ -239,73 +145,64 @@ calculate_ttest2 <- function(df, group.compare){
 }
 
 
-calculate_1anova <- function(data2){
+calculate_1anova <- function(df, group){
   # Check data type
-  variable <- data2 %>%
+  variable <- df %>%
     select(1) %>%
     names()
   
   # Format
-  temp.data <- data2 %>%
+  temp.df <- df %>%
+    select(1, group %>% flatten_int()) %>%
     gather(condition, abundance, -1) %>%
     separate(condition, into = c("condition", "replicate"), sep = "-") %>%
     group_by(!!as.name(variable))
   
   # Nest and test
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     nest() %>%
     mutate(aov = map(data, ~ aov(abundance ~ condition, data = .x)),
            summary = map(aov, tidy))
   
   # Unnest and FDR adjust
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     unnest(summary) %>%
     filter(term == "condition") %>%
     dplyr::rename(., P = p.value) %>%
     mutate(FDR = p.adjust(P, method = "BH", n = length(P)))
   
   # Join to data
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     select(1, P, FDR) %>%
-    left_join(data2, ., by = variable)
+    left_join(df, ., by = variable)
   
   # Exit
-  return(temp.data)
+  return(temp.df)
   
 }
 
-calculate_fc <- function(data, group.compare, difference = TRUE){
+
+calculate_fc <- function(data, group.compare){
   for (x in group.compare){
     temp.data <- data
     
-    # Specify calculation based on 'difference' argument
-    if (difference == TRUE){
-      temp.fc <- rowMeans(temp.data[x[[2]]]) - rowMeans(temp.data[x[[1]]])
-      
-    } else if (difference == FALSE){
-      temp.fc <- 2^rowMeans(temp.data[x[[2]]]) / 2^rowMeans(temp.data[x[[1]]])
-      
-    }
+    temp.fc <- rowMeans(temp.data[x[[2]]]) - rowMeans(temp.data[x[[1]]])
+
     # Add to dataframe
     data <- cbind(data, temp.name = temp.fc)
-    
     
     # Column name defined by group.compare variable and 'get_design' nomenclature
     temp1 <- data %>%
       select(x[[1]][1]) %>%
       names() %>%
-      #str_sub(., start = 1, end = 1)
       str_split(., "-", 2) %>% .[[1]] %>% .[1]
     
     temp2 <- data %>%
       select(x[[2]][1]) %>%
       names() %>%
-      #str_sub(., start = 1, end = 1)
       str_split(., "-", 2) %>% .[[1]] %>% .[1]
     
-    #temp.name <- paste(temp1, temp2, "_FC", sep = "")
     temp.name <- paste(temp1, temp2, sep = "-") %>% paste(., "FC", sep = "_")
-    
     
     # Rename appended column with dynamic variable
     names(data)[names(data) == "temp.name"] <- temp.name
