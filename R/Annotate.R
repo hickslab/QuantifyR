@@ -1,49 +1,3 @@
-keep_entry_uniprot <- function(df){
-  variable <- df %>%
-    select(1) %>%
-    names()
-  
-  if (variable == "Accession"){
-    # Split and return UniProt entry
-    temp.data <- df %>%
-      mutate(Accession = str_split(Accession, pattern = "\\|", simplify = TRUE)[, 2])
-    
-  } else if (variable == "Identifier"){
-    # Separate accession from modification sites
-    temp.data <- df %>%
-      separate(Identifier,
-               into = c("Accession", "Sites"),
-               sep = "--")
-    
-    # Split and return UniProt entry
-    temp.data <- temp.data %>%
-      mutate(Accession = str_split(Accession, "\\|", simplify = TRUE)[, 2])
-    
-    # Rebuild identifier
-    temp.data <- temp.data %>%
-      unite(col = "Identifier",
-            Accession,
-            Sites,
-            sep = "--")
-    
-  }
-  # Exit
-  return(temp.data)
-  
-}
-
-
-split_identifier <- function(df){
-  temp.data <- df %>%
-    separate(Identifier,
-             into = c("Accession", "Sites"),
-             sep = "--",
-             remove = FALSE) %>%
-    select(-Accession, -Sites, everything())
-  
-}
-
-
 add_missingness <- function(df, raw, group){
   variable <- df %>%
     select(1) %>%
@@ -83,14 +37,30 @@ add_missingness <- function(df, raw, group){
   
 }
 
+
+add_accession <- function(df){
+  temp.df <- df %>%
+    separate(Identifier,
+             into = c("Accession", "Sites"),
+             sep = "--",
+             remove = FALSE) %>%
+    select(-Accession, -Sites, everything())
+  
+}
+
+
 add_uniprot <- function(df, path){
+  # Parse "Accession" column for UniProt entry names
+  temp.df <- df %>%
+    mutate(Accession = str_split(Accession, pattern = "\\|", simplify = TRUE)[, 2])
+    
   # Load UniProt annotation file
-  temp.data <- read_delim(path, delim = "\t", col_types = cols()) %>%
+  annotation <- read_delim(path, delim = "\t", col_types = cols()) %>%
     dplyr::rename(Accession = Entry)
   
   # Join onto input data
-  temp.data <- temp.data %>%
-    left_join(df, ., by = "Accession")
+  temp.df <- annotation %>%
+    left_join(temp.df, ., by = "Accession")
   
 }
 

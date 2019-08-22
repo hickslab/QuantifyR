@@ -238,11 +238,11 @@ calculate_hclust <- function(df, group, k = 3){
     names()
   
   # Select abundance columns
-  temp.data <- df %>%
+  temp.df <- df %>%
     select(1, group %>% flatten_int())
   
   # Calculate mean condition abundance
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     gather(replicate, abundance, -1) %>%
     separate(replicate, into = c("condition", "replicate"), sep = "-") %>%
     group_by(!!as.name(variable), condition) %>%
@@ -251,7 +251,7 @@ calculate_hclust <- function(df, group, k = 3){
     spread(., condition, mean)
   
   # Z-score rowwise normalization
-  temp.data[-1] <- temp.data %>%
+  temp.data[-1] <- temp.df %>%
     select(-1) %>%
     apply(., 1, scale) %>%
     t()

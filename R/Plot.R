@@ -15,17 +15,38 @@ theme_custom <- function(base_size = 32){
 }
 
 
-plot_corr <- function(data, group = group) {
-  # Load packages
-  library(broom)
+plot_jitter <- function(df, group){
+  temp.df <- df %>%
+    select(1, group %>% flatten_int()) %>%
+    gather(sample, abundance, -1)
   
-  data2 %>%
+  temp.df %>%  
+    ggplot(., aes(x = sample, y = abundance, color = sample)) +
+    geom_jitter(height = 0, alpha = 0.5) +
+    geom_boxplot(color = "black",
+                 fill = NA,
+                 outlier.shape = NA,
+                 size = 1.5) +
+    guides(color = FALSE, fill = FALSE)
+  
+}
+
+
+plot_corr <- function(df, group){
+  temp.df <- df %>%
+    select(1, group %>% flatten_int()) %>%
     select(-1) %>%
     cor() %>%
-    tidy() %>%
-    gather(replicate, cor, -.rownames) %>%
-    ggplot(., aes(x = .rownames, y = replicate, fill = cor)) +
-    geom_tile()
+    as_tibble(rownames = "samples") %>%
+    gather(samples2, r, -1)
+  
+  temp.df %>%
+    ggplot(., aes(x = samples, y = samples2)) +
+    geom_raster(aes(fill = r)) +
+    scale_fill_distiller(palette = "Reds") +
+    geom_text(aes(label = round(r, 2)), size = 6) +
+    guides(fill = FALSE) +
+    labs(x = NULL, y = NULL)
   
 }
 
@@ -34,7 +55,7 @@ plot_dendrogram <- function(df, group, k = 3){
   # Load packages
   library(dendextend)
   
-  temp.data <- df %>%
+  temp.df <- df %>%
     select(group %>% flatten_int()) %>%
     scale() %>%
     t() %>%
@@ -43,12 +64,32 @@ plot_dendrogram <- function(df, group, k = 3){
     #cutree(., 3) %>%
     as.dendrogram()
   
-  temp.data %>%
+  temp.df %>%
     set("branches_k_color", k = 3) %>%
     plot(xlab = "Distance", ylab = "Replicate")
   
-  temp.data %>%
+  temp.df %>%
     rect.dendrogram(k)
+  
+  
+  library(ggdendro)
+  
+  temp.df <- df %>%
+    select(group %>% flatten_int()) %>%
+    scale() %>%
+    t() %>%
+    dist() %>%
+    hclust()
+  
+  temp.df %>%
+    as.dendrogram() %>%
+    dendro_data() %>%
+    ggdendrogram(rotate = TRUE, size = 2) +
+    labs(x = "", y = "Distance")
+    theme_custom()
+  
+  
+    
   
 }
 
@@ -129,9 +170,8 @@ plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2,
 	  coord_cartesian(xlim = c(-xlimit, xlimit), ylim = c(0, ylimit)) +
 	  xlab(expression("log"[2]*"(fold change)")) +
 	  ylab(if_else(fdr == TRUE,
-	               #expression("-log"[10]*"(FDR-adjusted "*italic(p)*"-value)"),
-	               expression( "-log"[10]*"(FDR)"),
-	               expression( "-log"[10]*"("*italic(p)*"-value)"))) +
+	               expression("-log"[10]*"(FDR-adjusted "*italic(p)*"-value)"),
+	               expression("-log"[10]*"("*italic(p)*"-value)"))) +
 	  facet_wrap(~ compare_count) +
 	  #geom_text(data = temp.label, aes(x = 0, y = Inf, label = compare_count), inherit.aes = FALSE) +
 	  guides(color = FALSE) +
@@ -145,6 +185,52 @@ plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2,
 }
 
 
+plot_count <- function(df, col, threshold = 0){
+  library(scales)
+  
+  temp.df <- df %>%
+    count(!!as.name(col)) %>%
+    filter(!is.na(!!as.name(col))) %>%
+    mutate(freq = n / sum(n))
+  
+  # Threshold and factorize
+  temp.df <- temp.df %>%
+    filter(n > threshold) %>%
+    mutate(term = str_trunc(!!as.name(col), 25)) %>%
+    mutate(term = fct_reorder(term, n, .desc = TRUE))
+  
+  temp.df %>%
+    ggplot(., aes(x = term, y = n)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = n), vjust = -0.5, size = 8) +
+    geom_text(aes(y = 0, label = scales::percent(freq)), vjust = 2, size = 8) +    
+    scale_y_continuous(expand = c(0.1, 0.1)) +
+    xlab(col) +
+    ylab("Count")
+  
+}
+
+
+plot_box <- function(df){
+  temp.df %>%
+    gather(sample, abundance, -1) %>%
+    separate(sample, into = c("condition", "replicate"), sep = "-", remove = FALSE) %>%
+    mutate(sample = fct_relevel(sample, names(group))) %>%
+    
+    ggplot(., aes(x = sample, y = abundance, color = condition)) +
+    geom_jitter(alpha = 0.5, height = 0) +
+    geom_boxplot(color = "black",
+                 fill = NA,
+                 outlier.shape = NA,
+                 size = 1.5) +
+    guides(color = FALSE, fill = FALSE) +
+    #coord_flip() +
+    theme_custom() +
+    labs(x = "Replicate", y = expression("log"[2]*"(abundance)"))
+  
+}
+
+
 plot_hclust <- function(df, group, k = 3, type = "jitter"){
   # Define experiment
   variable <- df %>%
@@ -152,11 +238,11 @@ plot_hclust <- function(df, group, k = 3, type = "jitter"){
     names()
   
   # Select abundance columns
-  temp.data <- df %>%
+  temp.df <- df %>%
     select(1, group %>% flatten_int())
   
   # Calculate mean condition abundance
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     gather(replicate, abundance, -1) %>%
     separate(replicate, into = c("condition", "replicate"), sep = "-") %>%
     group_by(!!as.name(variable), condition) %>%
@@ -165,12 +251,12 @@ plot_hclust <- function(df, group, k = 3, type = "jitter"){
     spread(., condition, mean)
   
   # Z-score rowwise normalization
-  temp.data[-1] <- temp.data %>%
+  temp.df[-1] <- temp.df %>%
     select(-1) %>%
     apply(., 1, scale) %>%
     t()
   
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     select(-1) %>%
     
     mutate(cluster = dist(.) %>%
@@ -188,16 +274,15 @@ plot_hclust <- function(df, group, k = 3, type = "jitter"){
     gather(condition, scaled, -rowname, -cluster, -cluster_count)
   
   # Set condition order
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     mutate(condition = factor(condition, level = names(group)))
   
   
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     mutate(breaks = group_indices(., condition))
-    #mutate(breaks = condition %>% as.numeric())
     
   # Plot
-  p <- temp.data %>%
+  p <- temp.df %>%
     ggplot(., aes(x = factor(breaks), y = scaled)) +
     geom_jitter(aes(color = condition), height = 0) +
     geom_boxplot(color = "black", fill = NA, outlier.shape = NA, size = 1.5) +
@@ -209,7 +294,7 @@ plot_hclust <- function(df, group, k = 3, type = "jitter"){
   
   # Line type
   if (type == "line"){
-    p <- temp.data %>%
+    p <- temp.df %>%
       ggplot(., aes(x = factor(breaks), y = scaled)) +
       geom_line(aes(group = rowname, color = cluster_count), alpha = 0.5, size = 1) +
       geom_smooth(aes(x = jitter(breaks)), method = "loess", size = 1.5) +
@@ -456,123 +541,9 @@ plot_GO_heatmap <- function(., group, column = "Gene ontology", threshold = 5){
 }
 
 
-plot_box <- function(data, group = group){
-  temp.data <- data %>%
-    select(-Identifier) %>%
-    #apply(., 1, scale) %>%
-    #t() %>%
-    #data.frame() %>%
-    log(., 2) %>%
-    #mutate_all(funs(replace(., is.na(.), 0))) %>%
-    mutate_all(funs(replace(., . == -Inf, 0))) %>%
-    bind_cols(data.frame(Identifier = data$Identifier), .) %>%
-    melt() %>%
-    #melt(na.rm = TRUE) %>%
-    mutate(group = str_sub(variable, end = -3))
-  
-  
-  # Plot
-  temp.data %>%
-    ggplot(., aes(variable, value, fill = group)) +
-    geom_boxplot(outlier.alpha = 0.1) +
-    facet_wrap(~group, scales = "free_x") +
-    scale_fill_discrete()
-  
-}
-
-
-plot_violin <- function(data, group = group){
-  temp.data <- data %>%
-    select(-Identifier) %>%
-    #apply(., 1, scale) %>%
-    #t() %>%
-    #data.frame() %>%
-    log(., 2) %>%
-    #mutate_all(funs(replace(., is.na(.), 0))) %>%
-    mutate_all(funs(replace(., . == -Inf, 0))) %>%
-    bind_cols(data.frame(Identifier = data$Identifier), .) %>%
-    melt() %>%
-    #melt(na.rm = TRUE) %>%
-    mutate(group = str_sub(variable, end = -3))
-  
-  
-  # Plot
-  temp.data %>%
-    ggplot(., aes(variable, value, fill = group)) +
-    geom_violin(trim = TRUE) +
-    #geom_jitter(alpha = 0.1) +
-    scale_fill_discrete()
-  
-}
-
-
-plot_joy <- function(data, group = group){
-  temp.data <- data %>%
-    select(-Identifier) %>%
-    #apply(., 1, scale) %>%
-    #t() %>%
-    #data.frame() %>%
-    log(., 2) %>%
-    #mutate_all(funs(replace(., is.na(.), 0))) %>%
-    mutate_all(funs(replace(., . == -Inf, 0))) %>%
-    bind_cols(data.frame(Identifier = data$Identifier), .) %>%
-    melt() %>%
-    #melt(na.rm = TRUE) %>%
-    mutate(group = str_sub(variable, end = -3))
-  
-  
-  # Plot
-  temp.data %>%
-    ggplot(., aes(value, variable, height = ..density.., fill = group)) +
-    geom_joy(stat = "density", scale = 3) +
-    #theme_joy(base_size = 14) +
-    theme(axis.text = element_text(vjust = 0, color = "black")) +
-    scale_x_continuous(expand = c(0.01, 0)) +
-    scale_y_discrete(expand = c(0.01, 0)) +
-    xlab(expression("log"[2]*"(Abundance)")) +
-    #facet_wrap(~group, scales = "free_y") +
-    ylab("")
-  
-}
-
-
-plot_fc_density <- function(df, group){
-  #df: calculate_fc()
-  
-  # Data preparation
-  temp.data <- 	df %>%
-    select(1, contains("_FC")) %>%
-    gather(compare, value, -1) %>%
-    separate(compare,
-             sep = "_",
-             into = c("compare", "variable"),
-             extra = "merge",
-             fill = "right")
-  
-  ggplot(., aes(x = value, fill = compare)) +
-    geom_density(alpha = 0.5)
-  
-  
-}
-
-
-plot_2venn <- function(df){
-  library(ggforce)
-  
-  df <- tibble(label = c("A", "B"),
-               x = c(-1, 1),
-               y = c(0, 0))
-  
-  df %>%
-    ggplot(., aes(x0 = x, y0 = y, r = 2, fill = label)) +
-    geom_circle(alpha = 0.5)
-  
-}
-
-
 plot_save <- function(p, dpi = 300){
   # Initialize image file
-  png("figure.png", width = 12, height = 9, units = "in", res = dpi)
+  png("figure.png", width = 12, height = 10, units = "in", res = dpi)
   
   # Write plot to file
   print(p)
