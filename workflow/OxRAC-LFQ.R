@@ -19,11 +19,11 @@ library(tidyverse)
 
 # Set the working directory.
 # The example below is based on downloading the package from GitHub.
-setwd("~/ProgenesisLFQ/data") # ???
+setwd("~/QuantifyR/data") # ???
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Process.R"))
 
 
@@ -50,7 +50,7 @@ names(database) <- str_split(names(database), " ", simplify = TRUE)[, 1]
 samples <- 19:34 # ???
 
 
-# Process data.
+# Process input data.
 pepm2 <- pepm %>%
   filter(Score > 13) %>%
   filter(Description != "cRAP") %>%
@@ -78,7 +78,7 @@ library(broom)
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Analyze.R"))
 
 
@@ -105,31 +105,31 @@ data2 <- data %>%
   impute_imp4p(., group)
 
 
-# Pairwise *t*-test
+# Hypothesis testing
 data3 <- data2 %>%
-  calculate_ttest(., group.compare, fdr = TRUE)
-
-
-# One-way ANOVA
-data4 <- data2 %>%
-  calculate_1anova()
+  calculate_ttest(., group.compare) %>% # Pairwise t-test
+  calculate_1anova(., group) # One-way ANOVA
 
 
 # Fold change
 data3 <- data3 %>%
-  calculate_fc(., group.compare, difference = TRUE) %>%
+  calculate_fc(., group.compare) %>%
   add_fc_max()
 
-data4 <- data4 %>%
-  calculate_fc(., group.compare, difference = TRUE) %>%
-  add_fc_max()
+
+# Heirarchical clustering
+data3 <- data3 %>%
+  filter(FDR < 0.05) %>%
+  filter(abs(`0-60_FC`) >= 1) %>%
+  calculate_hclust(., group, k = 2) %>%
+  left_join(data3, ., by = names(data3)[1])
 
 
 # Annotate ----
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Annotate.R"))
 
 
@@ -138,22 +138,13 @@ uniprot <- "Cr_uniprot_20190130_annotation.tsv"
 
 
 # Only missing values
-data5 <- data4 %>%
+data4 <- data3 %>%
   add_missingness(., data, group)
 
 
-# Heirarchical clustering
-data5 <- data5 %>%
-  filter(FDR < 0.05) %>%
-  filter(abs(`0-60_FC`) >= 1) %>%
-  calculate_hclust(., group, k = 4) %>%
-  left_join(data5, ., by = names(data5)[1])
-  
-
 # Accessions and annotate
-data5 <- data5 %>%
-  keep_entry_uniprot() %>%
-  split_identifier() %>%
+data4 <- data4 %>%
+  add_accession() %>%
   add_uniprot(., uniprot)
 
 
@@ -161,18 +152,18 @@ data5 <- data5 %>%
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Plot.R"))
 
 
 # PCA
 # Principal component analysis (PCA)
-data2 %>% plot_pca(., group) +
+data4 %>% plot_pca(., group) +
   theme_custom()
 
 
 # Volcano Plot
-data3 %>%
+data4 %>%
   plot_volcano(.,
                group,
                group.compare,
@@ -184,6 +175,8 @@ data3 %>%
 
 
 # Trend Profiles
+data4[group %>% flatten_int()] <- 2^data4[group %>% flatten_int()]
+
 data4 %>%
   filter(FDR < 0.05) %>% # ???
   filter(abs(`0-60_FC`) >= 1) %>% # ???
@@ -192,7 +185,7 @@ data4 %>%
 
 
 # GO Summary
-data5 %>%
+data4 %>%
   filter(Cluster != "NA") %>%
   plot_GO_cluster(., column = "Gene ontology", top = 3) +
   theme_custom(base_size = 24)

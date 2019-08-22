@@ -17,7 +17,7 @@ library(tidyverse)
 
 # Set the working directory.
 # The example below is based on downloading the package from GitHub.
-setwd("~/ProgenesisLFQ/data") # ???
+setwd("~/QuantifyR/data") # ???
 
 
 # Load Peptide Measurements spreadsheet exported from Progenesis.
@@ -38,7 +38,7 @@ protm <- protm %>%
 samples <- 11:22 # ???
 
 
-# Process data.
+# Process input data.
 protm2 <- protm %>%
   filter(Description != "cRAP") %>%
   filter(`Peptide count` >= 2 & `Unique peptides` >= 1)
@@ -61,7 +61,7 @@ library(broom)
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Analyze.R"))
 
 
@@ -69,14 +69,14 @@ source_url(paste0(url, "R/Analyze.R"))
 # Define the column indeces for replicates in each condition.
 a <- 2:5; b <- 6:9; c <- 10:13 # ???
 
-group <- list("25" = a, "50" = b, "100" = c) # ???
+group <- list("5" = a, "10" = b, "20" = c) # ???
 
-group.compare <- list("25-50" = list(a, b),
-                      "25-100" = list(a, c),
-                      "50-100" = list(b, c)) # ???
+group.compare <- list("5-10" = list(a, b),
+                      "5-20" = list(a, c),
+                      "10-20" = list(b, c)) # ???
 
 
-# Rename the abundance columns in a simplified "Condition-Replicate" format.
+# Rename the abundance columns in a simplified "condition-replicate" format.
 data <- data %>%
   rename_columns(., group)
 
@@ -88,36 +88,35 @@ data2 <- data %>%
   impute_imp4p(., group)
 
 
-# Pairwise *t*-test
+# Hypothesis testing
 data3 <- data2 %>%
-  calculate_ttest(., group.compare, fdr = TRUE)
-
-
-# One-way ANOVA
-data4 <- data2 %>%
-  calculate_1anova()
+  calculate_ttest(., group.compare) %>% # Pairwise t-test
+  calculate_1anova(., group) # One-way ANOVA
 
 
 # Fold change
 data3 <- data3 %>%
-  calculate_fc(., group.compare, difference = TRUE) %>%
+  calculate_fc(., group.compare) %>%
   add_fc_max()
 
-data4 <- data4 %>%
-  calculate_fc(., group.compare, difference = TRUE) %>%
-  add_fc_max()
+
+# Heirarchical clustering
+data3 <- data3 %>%
+  filter(FDR < 0.05) %>%
+  calculate_hclust(., group, k = 2) %>%
+  left_join(data3, ., by = names(data3)[1])
 
 
 # Annotate ----
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Annotate.R"))
 
 
 # UniProt
-data5 <- data4 %>%
+data4 <- data3 %>%
   add_missingness(., data, group)
 
 
@@ -125,18 +124,18 @@ data5 <- data4 %>%
 
 
 # Functions
-url <- "https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/"
+url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Plot.R"))
 
 
 # PCA
-# Principal component analysis (PCA)
-data2 %>% plot_pca(., group) +
+data4 %>%
+  plot_pca(., group) +
   theme_custom()
 
 
 # Volcano Plot
-data3 %>%
+data4 %>%
   plot_volcano(.,
                group,
                group.compare,

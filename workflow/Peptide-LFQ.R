@@ -1,5 +1,5 @@
-# PhosphoLFQ
-# Phosphosite-level label-free quantification workflow
+# PeptideLFQ
+# Peptide-Level Label-Free Quantification
 
 
 # Process ----
@@ -12,7 +12,6 @@ library(tidyverse)
 
 
 # Or install packages
-#install.packages("BiocManager"); BiocManager::install("Biostrings")
 #install.packages("devtools")
 #install.packages("tidyverse")
 
@@ -28,36 +27,34 @@ source_url(paste0(url, "R/Process.R"))
 
 
 # Load Peptide Measurements spreadsheet exported from Progenesis.
-pepm <- "20190715_EWM_TOR1_Phospho_pepm.csv" %>% # ???
+pepm <- "20180502_WOS52_Cr_UPS_pepm.csv" %>% # ???
   read_csv(., skip = 2, col_types = cols())
 
 
 # Load Peptide Measurements spreadsheet exported from Progenesis.
-protm <- "20190715_EWM_TOR1_Phospho_protm.csv" %>% # ???
+protm <- "20180502_WOS52_Cr_UPS_protm.csv" %>% # ???
   read_csv(., skip = 2, col_types = cols()) %>%
   select(1:4) %>%
   separate_rows(., Accession, sep = ";")
 
 
 # Load protein sequence database.
-database <- "Cr_uniprot_crap_20190130.fasta" %>% # ???
+database <- "20180502_Cr_mt_chl_UPS.fasta" %>% # ???
   readAAStringSet(.)
 
 names(database) <- str_split(names(database), " ", simplify = TRUE)[, 1]
 
-
 # Define normalized abundance columns in pepm
-samples <- 19:38 # ???
+samples <- 19:30 # ???
 
 
-# Process input data
+# Process input data.
 pepm2 <- pepm %>%
   filter(Score > 13) %>%
   filter(Description != "cRAP") %>%
   left_join(., protm, by = "Accession") %>%
   reduce_features() %>%
-  filter(str_detect(Modifications, "Phospho")) %>%
-  get_identifier(., database, mod = "Phospho") %>%
+  mutate(Identifier = str_c(Accession, Sequence, sep = "--")) %>%
   reduce_identifiers(., samples)
 
 data <- pepm2 %>%
@@ -84,16 +81,16 @@ source_url(paste0(url, "R/Analyze.R"))
 
 # Workflow
 # Define the column indeces for replicates in each condition.
-a <- 2:6; b <- 7:11; c <- 12:16; d <- 17:21 # ???
+a <- 2:5; b <- 6:9; c <- 10:13 # ???
 
-group <- list("Control" = a, "AZD8055" = b, "Torin1" = c, "Rapamycin" = d) # ???
+group <- list("5" = a, "10" = b, "20" = c) # ???
 
-group.compare <- list("Control-AZD8055" = list(a, b),
-                      "Control-Torin1" = list(a, c),
-                      "Control-Rapamycin" = list(a, d)) # ???
+group.compare <- list("5-10" = list(a, b),
+                      "5-20" = list(a, c),
+                      "10-20" = list(b, c)) # ???
 
 
-# Rename the abundance columns in a simplified "Condition-Replicate" format
+# Rename the abundance columns in a simplified "condition-replicate" format.
 data <- data %>%
   rename_columns(., group)
 
@@ -120,7 +117,6 @@ data3 <- data3 %>%
 # Heirarchical clustering
 data3 <- data3 %>%
   filter(FDR < 0.05) %>%
-  filter(abs(`0-60_FC`) >= 1) %>%
   calculate_hclust(., group, k = 2) %>%
   left_join(data3, ., by = names(data3)[1])
 
@@ -133,19 +129,9 @@ url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Annotate.R"))
 
 
-# Annotations
-uniprot <- "Cr_uniprot_20190130_annotation.tsv"
-
-
-# Only missing values
+# UniProt
 data4 <- data3 %>%
   add_missingness(., data, group)
-
-
-# Accessions and annotate
-data4 <- data4 %>%
-  add_accession() %>%
-  add_uniprot(., uniprot)
 
 
 # Plot ----
@@ -157,8 +143,8 @@ source_url(paste0(url, "R/Plot.R"))
 
 
 # PCA
-# Principal component analysis (PCA)
-data4 %>% plot_pca(., group) +
+data4 %>%
+  plot_pca(., group) +
   theme_custom()
 
 
@@ -177,13 +163,5 @@ data4 %>%
 # Trend Profiles
 data4 %>%
   filter(FDR < 0.05) %>% # ???
-  #filter(abs(`FC_max`) >= 1) %>% # ???
   plot_hclust(., group, k = 2) +
   theme_custom()
-
-
-# GO Summary
-data4 %>%
-  filter(Cluster != "NA") %>%
-  plot_GO_cluster(., column = "Gene ontology", top = 3) +
-  theme_custom(base_size = 24)
