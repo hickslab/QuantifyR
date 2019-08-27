@@ -139,7 +139,7 @@ get_identifier_redox2 <- function(df, database, reduced = "Nethylmaleimide"){
 }
 
 
-simulate_data <- function(data = 1000, p = 100, fold = c(2, 4), num.rep = 3, cv = 20){
+simulate_data <- function(data = 1000, p = 100, fold = c(2, 4), num.rep = 3, cv = 10){
   # Initiate RNG state
   set.seed(123)
   
@@ -147,7 +147,7 @@ simulate_data <- function(data = 1000, p = 100, fold = c(2, 4), num.rep = 3, cv 
                                   str_c("P", c(1:p), sep = "_")))
   
   temp.df <- temp.df %>%
-    mutate(Range = rnorm(n = n(), mean = 8, sd = 3))
+    mutate(Range = rnorm(n = n(), mean = 9, sd = 2))
   
   fold2 <- c(1, fold)
   
@@ -158,14 +158,11 @@ simulate_data <- function(data = 1000, p = 100, fold = c(2, 4), num.rep = 3, cv 
       
       temp.df <- temp.df %>%
         mutate(!!temp.name := if_else(str_detect(Accession, "P_"),
-                                      rnorm(n = Range, mean = Range + log2(fold2[x]), sd = abs(Range * (cv / 100))),
-                                      rnorm(n = Range, mean = Range, sd = abs(Range * (cv / 100)))))
+                                      rnorm(n = Range, mean = Range + log2(fold2[x]), sd = (1.2^(-Range)) * (cv / 5)),
+                                      rnorm(n = Range, mean = Range, sd = (1.2^(-Range) * (cv / 5)))))
     }
   }
   temp.df <- temp.df %>%
     select(-Range)
-  
-  temp.df %>%
-    mutate(sd = abs(Range * (cv / 100)))
   
 }
