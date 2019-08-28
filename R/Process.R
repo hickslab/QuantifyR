@@ -138,31 +138,3 @@ get_identifier_redox2 <- function(df, database, reduced = "Nethylmaleimide"){
   
 }
 
-
-simulate_data <- function(data = 1000, p = 100, fold = c(2, 4), num.rep = 3, cv = 10){
-  # Initiate RNG state
-  set.seed(123)
-  
-  temp.df <- tibble(Accession = c(str_c("N", c(1:(data - p)), sep = "_"),
-                                  str_c("P", c(1:p), sep = "_")))
-  
-  temp.df <- temp.df %>%
-    mutate(Range = rnorm(n = n(), mean = 9, sd = 2))
-  
-  fold2 <- c(1, fold)
-  
-  for (x in 1:length(fold2)){
-    for (y in 1:num.rep){
-      temp.name <- LETTERS[x] %>%
-        paste(., y, sep = "-")
-      
-      temp.df <- temp.df %>%
-        mutate(!!temp.name := if_else(str_detect(Accession, "P_"),
-                                      rnorm(n = Range, mean = Range + log2(fold2[x]), sd = (1.2^(-Range)) * (cv / 5)),
-                                      rnorm(n = Range, mean = Range, sd = (1.2^(-Range) * (cv / 5)))))
-    }
-  }
-  temp.df <- temp.df %>%
-    select(-Range)
-  
-}

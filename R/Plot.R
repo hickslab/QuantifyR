@@ -170,7 +170,8 @@ plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2,
 	  coord_cartesian(xlim = c(-xlimit, xlimit), ylim = c(0, ylimit)) +
 	  xlab(expression("log"[2]*"(fold change)")) +
 	  ylab(if_else(fdr == TRUE,
-	               expression("-log"[10]*"(FDR-adjusted "*italic(p)*"-value)"),
+	               #expression("-log"[10]*"(FDR-adjusted "*italic(p)*"-value)"),
+	               expression("-log"[10]*"("*italic(q)*"-value)"),
 	               expression("-log"[10]*"("*italic(p)*"-value)"))) +
 	  facet_wrap(~ compare_count) +
 	  #geom_text(data = temp.label, aes(x = 0, y = Inf, label = compare_count), inherit.aes = FALSE) +
