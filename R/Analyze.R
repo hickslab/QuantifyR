@@ -44,6 +44,25 @@ simulate_group <- function(num.cond = 3, num.rep = 3){
 }
 
 
+simulate_compare <- function(num.cond = 3, num.rep = 3){
+  group.compare <- list()
+  
+  assign(LETTERS[1], c(2:(2 + num.rep - 1)))
+  
+  idx <- 2 + num.rep
+  
+  for (x in 1:num.cond){
+    assign(LETTERS[x + 1], c(idx:(idx + num.rep - 1)))
+    
+    group.compare[[paste(LETTERS[1], LETTERS[x + 1], sep = "-")]] <- list(get(LETTERS[1]), get(LETTERS[x + 1]))
+    
+    idx <- idx + num.rep
+  }
+  return(group.compare)
+  
+}
+
+
 rename_columns <- function(df, group){
   variable <- df %>%
     select(1) %>%
