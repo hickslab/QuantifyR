@@ -1,3 +1,12 @@
+filter_score <- function(df, threshold = 13){
+  df %>%
+    filter(Score != "---") %>%
+    mutate(Score = Score %>% as.numeric()) %>%
+    filter(Score > threshold)
+  
+}
+
+
 reduce_features <- function(df){
   temp.df <- df %>%
     # Summarize features with identical peptides - different accessions
