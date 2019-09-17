@@ -1,5 +1,5 @@
 filter_score <- function(df, threshold = 13){
-  df %>%
+  temp.df <- df %>%
     filter(Score != "---") %>%
     mutate(Score = Score %>% as.numeric()) %>%
     filter(Score > threshold)
