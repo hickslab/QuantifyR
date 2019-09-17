@@ -105,11 +105,11 @@ plot_pca <- function(df, group){
     rownames_to_column() %>%
     separate(rowname, into = c("condition", "replicate"), sep = "-") %>%
     
-    ggplot(., aes(x = PC1, y = PC2, color = condition, label = replicate)) +
-    geom_point(alpha = 0.5, size = 20) +
-    geom_text(color = "black", size = 10) +
-    scale_color_discrete(limits = names(group)) +
-    labs(color = "Condition")
+    ggplot(., aes(x = PC1, y = PC2)) +
+    geom_point(aes(color = condition, shape = condition), alpha = 0.5, size = 18) +
+    geom_text(aes(label = replicate), color = "black", size = 10) +
+    #scale_color_discrete(limits = names(group)) +
+    labs(color = "Condition", shape = "Condition")
   
 }
 
@@ -165,7 +165,7 @@ plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2,
 	# Plot
 	temp.data %>%
 	  ggplot(., aes(x = FC, y = -log10(significance), color = type)) +
-	  geom_point(size = 3, alpha = 0.8) +
+	  geom_point(size = 5, alpha = 0.8) +
 	  scale_color_manual(values = c("same" = "grey70", "down" = "blue", "up" = "red")) +
 	  coord_cartesian(xlim = c(-xlimit, xlimit), ylim = c(0, ylimit)) +
 	  xlab(expression("log"[2]*"(fold change)")) +
@@ -178,7 +178,7 @@ plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2,
 	  guides(color = FALSE) +
 	  
 	  #scale_x_continuous(breaks = -xlimit:xlimit) +
-	  scale_y_continuous(breaks = -ylimit:ylimit) +
+	  #scale_y_continuous(breaks = -ylimit:ylimit) +
 	  
 	  geom_hline(yintercept = -log10(0.05), linetype = 2, size = 1, color = "black") +
 	  geom_vline(xintercept = c(-log2(threshold), log2(threshold)), linetype = 2, size = 1, color = "black")
@@ -325,13 +325,10 @@ plot_heatmap <- function(df){
 }
 
 
-plot_GO <- function(df, top = 5){
+plot_GO <- function(df, column = "Gene ontology", top = 5){
   # Select GO columns
   temp.df <- df %>%
-    #select(contains("Gene ontology")) %>%
-    #gather(column, term) %>%
-    
-    select(Accession, contains("Gene ontology")) %>%
+    select(Accession, contains(column)) %>%
     distinct(., Accession, .keep_all = TRUE) %>%
     gather(column, term, -1) %>%
     
@@ -343,19 +340,28 @@ plot_GO <- function(df, top = 5){
     mutate(term = str_trunc(term, 50))
     
   # Count terms
-  temp.df %>%
-    count(column, term) %>%
-
+  temp.df <- temp.df %>%
+    count(column, term)
+  
+  # Filter for top terms
+  temp.df <- temp.df %>%
     group_by(column) %>%
     top_n(., top, n) %>%
-    dplyr::slice(1:top) %>%
-
-    ggplot(., aes(x = reorder(term, n), y = n, fill = column)) +
-    geom_bar(stat = "identity") +
+    arrange(desc(n)) %>%
+    dplyr::slice(1:top)
+  
+  # Plot
+  temp.df %>%
+    mutate(Cluster = "Proteins") %>%
+    ggplot(., aes(x = reorder(term, n), y = Cluster)) +
+    geom_raster(aes(fill = column, alpha = n)) +
+    geom_text(aes(label = n), size = 10) +
+    scale_alpha_continuous(range = c(0.5, 1)) +
     facet_grid(column ~ ., scales = "free") +
-    guides(fill = FALSE) +
-    labs(x = NULL, y = "Proteins") +
-    coord_flip()
+    guides(color = FALSE, fill = FALSE, alpha = FALSE) +
+    labs(x = NULL, y = NULL) +
+    coord_flip() +
+    theme_custom()
   
 }
 
@@ -542,9 +548,12 @@ plot_GO_heatmap <- function(., group, column = "Gene ontology", threshold = 5){
 }
 
 
-plot_save <- function(p, dpi = 300){
+plot_save <- function(p, filename = "figure.png", w = 12, h = 10, dpi = 300){
+  # Single column: width = 12, height = 10
+  # Double colum:  width = 10, height = 5 
+  
   # Initialize image file
-  png("figure.png", width = 12, height = 10, units = "in", res = dpi)
+  png(filename, width = w, height = h, units = "in", res = dpi)
   
   # Write plot to file
   print(p)
