@@ -52,7 +52,7 @@ samples <- 19:38 # ???
 
 # Process input data
 pepm2 <- pepm %>%
-  filter(Score > 13) %>%
+  filter_score(., 13) %>%
   filter(Description != "cRAP") %>%
   left_join(., protm, by = "Accession") %>%
   reduce_features() %>%
