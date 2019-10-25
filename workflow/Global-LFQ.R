@@ -72,8 +72,8 @@ a <- 2:5; b <- 6:9; c <- 10:13 # ???
 group <- list("5" = a, "10" = b, "20" = c) # ???
 
 group.compare <- list("5-10" = list(a, b),
-                      "5-20" = list(a, c),
-                      "10-20" = list(b, c)) # ???
+                      "10-20" = list(b, c),
+                      "5-20" = list(a, c)) # ???
 
 
 # Rename the abundance columns in a simplified "condition-replicate" format.

@@ -7,6 +7,7 @@
 <meta charset="utf-8" />
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
 
@@ -268,7 +269,6 @@ code {
 }
 img {
   max-width:100%;
-  height: auto;
 }
 .tabbed-pane {
   padding-top: 12px;
@@ -342,18 +342,6 @@ summary {
 }
 </style>
 
-<script>
-$(document).ready(function () {
-  window.buildTabsets("TOC");
-});
-
-$(document).ready(function () {
-  $('.tabset-dropdown > .nav-tabs > li').click(function () {
-    $(this).parent().toggleClass('nav-tabs-open')
-  });
-});
-</script>
-
 <!-- code folding -->
 
 
@@ -384,12 +372,14 @@ $(document).ready(function () {
 <ol style="list-style-type: decimal">
 <li><a href="https://hickslab.github.io/QuantifyR/">Read the <code>QuantifyR</code> tutorial</a></li>
 <li>Collect the required data.</li>
-<li>Download a workflow based on the experiment.</li>
+<li>Download a <a href="https://github.com/hickslab/QuantifyR/tree/master/workflow">workflow</a> based on the experiment.</li>
 <li>Find and update sections marked by <code>???</code> in the workflow.</li>
 </ol>
 </div>
 <div id="required" class="section level2">
 <h2>Required</h2>
+<div id="progenesis" class="section level3">
+<h3>Progenesis:</h3>
 <table>
 <thead>
 <tr class="header">
@@ -415,15 +405,19 @@ $(document).ready(function () {
 </tbody>
 </table>
 </div>
+</div>
 <div id="workflow" class="section level2">
 <h2>Workflow</h2>
 <div id="lfq" class="section level3">
 <h3>LFQ:</h3>
+<div id="progenesis-qi-for-proteomics-v2.0" class="section level4">
+<h4>Progenesis QI for proteomics v2.0</h4>
 <ul>
 <li><a href="https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/ProteinLFQ.R">Global</a></li>
-<li><a href="https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R">OxRAC</a></li>
+<li><a href="https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R">Ox-RAC</a></li>
 <li><a href="https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/PhosphoLFQ.R">Phosphorylation</a></li>
 </ul>
+</div>
 </div>
 </div>
 </div>
@@ -445,6 +439,23 @@ $(document).ready(function () {
 
 
 </script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
 <script>

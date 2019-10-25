@@ -316,15 +316,15 @@ calculate_hclust <- function(df, group, k = 3){
     spread(., condition, mean)
   
   # Z-score rowwise normalization
-  temp.data[-1] <- temp.df %>%
+  temp.df[-1] <- temp.df %>%
     select(-1) %>%
     apply(., 1, scale) %>%
     t()
   
   # Rename Z-score columns
-  names(temp.data)[-1] <- names(temp.data)[-1] %>% paste0(., "_Z")
+  names(temp.df)[-1] <- names(temp.df)[-1] %>% paste0(., "_Z")
   
-  temp.data <- temp.data %>%
+  temp.df <- temp.df %>%
     select(-1) %>%
     
     mutate(Cluster = dist(.) %>%
@@ -333,9 +333,9 @@ calculate_hclust <- function(df, group, k = 3){
     
     mutate(Cluster = LETTERS[Cluster]) %>%
     
-    bind_cols(temp.data[1], .)
+    bind_cols(temp.df[1], .)
   
   # Exit
-  return(temp.data)
+  return(temp.df)
   
 }

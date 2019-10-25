@@ -189,6 +189,10 @@ samples
 
 > Filter to keep peptides with Percolator-adjusted Mascot scores > 13.
 
+* Ionization produces various charge states of the same peptide, but generally only a subset of these are either selected for MS/MS fragmentation or identified by database searching. Peptide deconvolution shares the search engine identifications across different charge states of the same peptide.
+
+* Peptide ions identified by deconvolution are assigned a "---" in the Score column. Since these assignments could introduce unneccesary variation in an experiment, they are removed in the current Process module workflow.
+
 > Filter to remove peptides from proteins in the contaminant database.
 
 > Join the protein identification statistics onto the Peptide Measurement data.
@@ -223,7 +227,7 @@ samples
 
 ```{r}
 data <- pepm %>%
-  filter(Score > 13) %>%
+  filter_score(., 13) %>%
   filter(Description != "cRAP") %>%
   left_join(., protm, by = "Accession") %>%
   reduce_features() %>%
@@ -335,7 +339,7 @@ data2 <- data %>%
 
 ```{r}
 data3 <- data2 %>%
-  calculate_ttest(., group.compare, fdr = TRUE)
+  calculate_ttest(., group.compare)
 
 ```
 
@@ -348,7 +352,7 @@ data3 <- data2 %>%
 
 ```{r}
 data4 <- data2 %>%
-  calculate_1anova()
+  calculate_1anova(., group)
 
 ```
 
@@ -361,12 +365,12 @@ data4 <- data2 %>%
 
 ```{r}
 data3 <- data3 %>%
-  calculate_fc(., group.compare, difference = TRUE) %>%
+  calculate_fc(., group.compare) %>%
   add_fc_max()
 
 
 data4 <- data4 %>%
-  calculate_fc(., group.compare, difference = TRUE) %>%
+  calculate_fc(., group.compare) %>%
   add_fc_max()
 
 ```
@@ -408,14 +412,15 @@ source_url(paste0(url, "R/Annotate.R"))
 
 ## Annotation
 
-> Given a list of protein accessions, access UniProt and pull known information.
+> Given a list of UniProt protein accessions, add ID mapping table.
 
 ```{r eval = FALSE}
 data5 <- data4 %>%
   add_missingness(., data, group)
-  #keep_entry_uniprot() %>%
-  #split_identifier() %>%
-  #add_uniprot(., paste0(url, "data/Cr_uniprot_20190130_annotation.tsv"))
+
+data5 <- data5 %>%
+  add_accession() %>%
+  add_uniprot(., "Cr_uniprot_20190130_annotation.tsv")
 
 ```
 

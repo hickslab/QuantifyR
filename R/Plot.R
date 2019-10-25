@@ -43,7 +43,7 @@ plot_corr <- function(df, group){
   temp.df %>%
     ggplot(., aes(x = samples, y = samples2)) +
     geom_raster(aes(fill = r)) +
-    scale_fill_distiller(palette = "Reds") +
+    scale_fill_distiller(palette = "Reds", limits = c(0.8, 1)) +
     geom_text(aes(label = round(r, 2)), size = 6) +
     guides(fill = FALSE) +
     labs(x = NULL, y = NULL)
@@ -95,19 +95,21 @@ plot_dendrogram <- function(df, group, k = 3){
 
 
 plot_pca <- function(df, group){
-  temp.data <- df %>%
+  temp.df <- df %>%
     select(group %>% flatten_int())
   
-  temp.data %>%
+  temp.df %>%
     prcomp() %>%
     .$rotation %>%
     data.frame() %>%
     rownames_to_column() %>%
     separate(rowname, into = c("condition", "replicate"), sep = "-") %>%
+    mutate(condition = fct_relevel(condition, names(group))) %>%
     
     ggplot(., aes(x = PC1, y = PC2)) +
     geom_point(aes(color = condition, shape = condition), alpha = 0.5, size = 18) +
     geom_text(aes(label = replicate), color = "black", size = 10) +
+    #stat_ellipse(aes(color = condition)) +
     #scale_color_discrete(limits = names(group)) +
     labs(color = "Condition", shape = "Condition")
   

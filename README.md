@@ -4,10 +4,12 @@
 
 1. [Read the `QuantifyR` tutorial](https://hickslab.github.io/QuantifyR/)
 2. Collect the required data.
-3. Download a workflow based on the experiment.
+3. Download a [workflow](https://github.com/hickslab/QuantifyR/tree/master/workflow) based on the experiment.
 4. Find and update sections marked by `???` in the workflow.
 
 ## Required
+
+### Progenesis:
 
 |Experiment|Peptide Measurements|Protein Measurements|Database|
 |:-:|:-:|:-:|:-:|
@@ -17,7 +19,9 @@
 ## Workflow
 
 ### LFQ:
+
+#### Progenesis QI for proteomics v2.0
 * [Global](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/ProteinLFQ.R)
-* [OxRAC](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R)
+* [Ox-RAC](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R)
 * [Phosphorylation](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/PhosphoLFQ.R)
 
