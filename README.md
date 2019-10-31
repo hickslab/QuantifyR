@@ -21,7 +21,8 @@
 ### LFQ:
 
 #### Progenesis QI for proteomics v2.0
-* [Global](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/ProteinLFQ.R)
-* [Ox-RAC](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/RedoxLFQ.R)
-* [Phosphorylation](https://raw.githubusercontent.com/hickslab/ProgenesisLFQ/master/workflow/PhosphoLFQ.R)
+* [Global](https://raw.githubusercontent.com/hickslab/QuantifyR/master/workflow/Global-LFQ.R)
+* [Peptide](https://raw.githubusercontent.com/hickslab/QuantifyR/master/workflow/Peptide-LFQ.R)
+* [Ox-RAC](https://raw.githubusercontent.com/hickslab/QuantifyR/master/workflow/OxRAC-LFQ.R)
+* [Phosphorylation](https://raw.githubusercontent.com/hickslab/QuantifyR/master/workflow/Phospho-LFQ.R)
 
