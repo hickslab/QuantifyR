@@ -183,24 +183,25 @@ calculate_ttest <- function(df, group.compare){
       mutate(ttest = map(data, ~ t.test(abundance ~ condition, data = .x, 
                                         alternative = "two.sided",
                                         var.equal = TRUE)),
-             summary = map(ttest, tidy))
+             summary = map(ttest, tidy)) %>%
+      unnest(summary)
     
-    # Unnest and FDR adjust
-    temp.data <- temp.data %>%
-      unnest(summary) %>%
+    # FDR adjust
+    temp.data2 <- temp.data %>%
+      ungroup() %>%
       mutate(fdr = p.adjust(p.value, method = "BH", n = length(p.value)))
     
     # Select model output
-    temp.data <- temp.data %>%
+    temp.data3 <- temp.data2 %>%
       select(1, p.value, fdr)
     
     # Rename columns
     temp.name <- group.compare[i] %>% names()
-    temp.data <- temp.data %>% rename_at("p.value", ~ paste(temp.name, "_P", sep = ""))
-    temp.data <- temp.data %>% rename_at("fdr", ~ paste(temp.name, "_FDR", sep = ""))
+    temp.data3 <- temp.data3 %>% rename_at("p.value", ~ paste(temp.name, "_P", sep = ""))
+    temp.data3 <- temp.data3 %>% rename_at("fdr", ~ paste(temp.name, "_FDR", sep = ""))
     
     # Join to data
-    temp.ttest <- temp.data %>%
+    temp.ttest <- temp.data3 %>%
       left_join(temp.ttest, ., by = variable)
     
   }
