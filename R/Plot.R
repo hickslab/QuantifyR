@@ -161,7 +161,7 @@ plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2,
   #
   temp.label <- temp.data %>%
     group_by(compare, compare_count) %>%
-    count() %>%
+    dplyr::count() %>%
     data.frame()
   
 	# Plot
