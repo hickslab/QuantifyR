@@ -29,4 +29,5 @@
 ### TMT:
 
 #### PEAKS Studio Xpro
+* [Global](https://github.com/hickslab/QuantifyR/blob/master/workflow/TMT_Protein_R.R)
 * [H-L NEM](https://github.com/hickslab/QuantifyR/blob/master/workflow/H-L_NEM_TMT.R)
