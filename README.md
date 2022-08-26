@@ -26,8 +26,11 @@
 * [Ox-RAC](https://raw.githubusercontent.com/hickslab/QuantifyR/master/workflow/OxRAC-LFQ.R)
 * [Phosphorylation](https://raw.githubusercontent.com/hickslab/QuantifyR/master/workflow/Phospho-LFQ.R)
 
+#### PEAKS Studio Xpro
+* [Global](https://github.com/hickslab/QuantifyR/blob/master/workflow/Global-LFQ-PEAKS.R)
+
 ### TMT:
 
 #### PEAKS Studio Xpro
-* [Global](https://github.com/hickslab/QuantifyR/blob/master/workflow/TMT_Protein_R.R)
+* [Global](https://github.com/hickslab/QuantifyR/blob/master/workflow/Global-TMT-PEAKS.R)
 * [H-L NEM](https://github.com/hickslab/QuantifyR/blob/master/workflow/H-L_NEM_TMT.R)
