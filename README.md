@@ -29,4 +29,4 @@
 ### TMT:
 
 #### PEAKS Studio Xpro
-*[H-L NEM](https://github.com/hickslab/QuantifyR/blob/master/workflow/H-L_NEM_TMT.R)
+* [H-L NEM](https://github.com/hickslab/QuantifyR/blob/master/workflow/H-L_NEM_TMT.R)
