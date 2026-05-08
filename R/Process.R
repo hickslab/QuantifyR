@@ -194,15 +194,15 @@ get_identifier_FragPipe <- function(df, database, mod = "\\(UniMod\\:21\\)"){
     all_positions <- c()
     
     # A while loop to handle sequences with multiple modifications
-    while (str_count(current_sequence, "\\(UniMod\\:21\\)") > 0) {
+    while (str_count(current_sequence, mod) > 0) {
       # Find the starting position of the first modification
-      position <- str_locate(current_sequence, "\\(UniMod\\:21\\)") 
+      position <- str_locate(current_sequence, mod) 
         
         # Store the position and add to the list
         all_positions <- c(all_positions, position[1])
         
         # Remove the first modification found
-        current_sequence <- str_replace(current_sequence, "\\(UniMod\\:21\\)", "")
+        current_sequence <- str_replace(current_sequence, mod, "")
     }
     
     # Paste all found positions into a single string
@@ -288,7 +288,7 @@ get_phospho_localization <- function(df, database, Threshold = 0.75){
   
   temp.df <- temp.df %>% 
     mutate(positions = positions - 1) %>% 
-    filter(Scores > 0) %>% 
+    filter(Scores > Threshold) %>% 
     mutate(Scores = Scores*100) %>% 
     filter(positions == Location) %>% 
     mutate(residue = str_sub(Stripped.Sequence, start = positions, end = positions)) 
