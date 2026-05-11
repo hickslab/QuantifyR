@@ -238,7 +238,7 @@ temp.df <- temp.df %>%
 
 # Join identifier column to input data
 temp.df %>%
-  select(`Feature`, Identifier, residue, site) %>%
+  select(`Feature`, Identifier) %>%
   distinct() %>%
   inner_join(df, ., by = "Feature")
 
