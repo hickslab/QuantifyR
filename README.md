@@ -29,6 +29,10 @@
 #### PEAKS Studio Xpro
 * [Global](https://github.com/hickslab/QuantifyR/blob/master/workflow/Global-LFQ-PEAKS.R)
 
+#### DIA: FragPipe
+* [Global](https://github.com/hickslab/QuantifyR/blob/master/workflow/QuantifyR_FragPipe.r)
+* [Phosphorylation](https://github.com/hickslab/QuantifyR/blob/master/workflow/QuantifyR_Phospho_FragPipe.R)
+  
 ### TMT:
 
 #### PEAKS Studio Xpro
