@@ -113,7 +113,7 @@ url <- "https://raw.githubusercontent.com/hickslab/QuantifyR/master/"
 source_url(paste0(url, "R/Plot.R"))
 
 #data4 <- data3 %>%
-#add_missingness(., data, group) I don't know wtf this does but I think it's broken anyways so I took it out
+#add_missingness(., data, group) 
 
 #Plotting PCA plot
 data3 %>%
@@ -121,77 +121,6 @@ data3 %>%
   theme_custom()
 
 
-#This is just the broken open volcano plot code so I could change the colors + screw with the formatting, you can just use whats from the github if you want
-plot_volcano <- function(data3, group, group.compare, fdr = TRUE, threshold = 2, xlimit = 10, ylimit = 8){
-  # Data preparation
-  temp.data <- 	data3 %>%
-    #select(-unlist(group)) %>% View
-    select(1, matches("_P|_FDR|_FC")) %>%
-    gather(compare, value, -1) %>%
-    separate(compare,
-             sep = "_",
-             into = c("compare", "variable"),
-             extra = "merge",
-             fill = "right") %>%
-    spread(variable, value)
-  
-  # Check if FDR-adjustment was applied
-  if (fdr == TRUE){
-    temp.data <- temp.data %>%
-      mutate(significance = FDR)
-    
-  } else {
-    temp.data <- temp.data %>%
-      mutate(significance = P)
-    
-  }
-  
-  # Set significance types
-  temp.data <- temp.data %>%
-    mutate(down = if_else(FC <= -log2(threshold) & significance < 0.05, 1, 0),
-           up = if_else(FC >= log2(threshold) & significance < 0.05, 1, 0),
-           type = if_else(down == 1, "down", if_else(up == 1, "up", "same")))
-  
-  # Build facet titles
-  temp.data <- temp.data %>%
-    group_by(compare) %>%
-    mutate(down = sum(down), up = sum(up)) %>%
-    mutate(compare_count = paste(compare, "\nDown ", sep = "", down, " / Up ", up))
-  
-  # Set facet order
-  temp.data <- temp.data %>%
-    ungroup() %>%
-    mutate(compare = factor(compare, levels = names(group.compare)),
-           type = factor(type, levels = c("same", "down", "up")))
-  
-  #
-  temp.label <- temp.data %>%
-    group_by(compare, compare_count) %>%
-    dplyr::count() %>%
-    data.frame()
-  
-  # Plot
-  temp.data %>%
-    ggplot(., aes(x = FC, y = -log10(significance), color = type)) +
-    geom_point(size = 2, alpha = 0.9, shape = 16) +
-    scale_color_manual(values = c("same" = "grey70", "down" = "grey30", "up" = "maroon")) +
-    coord_cartesian(xlim = c(-xlimit, xlimit), ylim = c(0, ylimit)) +
-    xlab(expression("log"[2]*"(fold change)")) +
-    ylab(if_else(fdr == TRUE,
-                 #expression("-log"[10]*"(FDR-adjusted "*italic(p)*"-value)"),
-                 expression("-log"[10]*"("*italic(q)*"-value)"),
-                 expression("-log"[10]*"("*italic(p)*"-value)"))) +
-    facet_wrap(~ compare_count) +
-    #geom_text(data = temp.label, aes(x = 0, y = Inf, label = compare_count), inherit.aes = FALSE) +
-    guides(color = FALSE) +
-    
-    #scale_x_continuous(breaks = -xlimit:xlimit) +
-    #scale_y_continuous(breaks = -ylimit:ylimit) +
-    
-    geom_hline(yintercept = -log10(0.05), linetype = 2, size = 0.5, color = "black") +
-    geom_vline(xintercept = c(-log2(threshold), log2(threshold)), linetype = 2, size = 0.5, color = "black")
-  
-}
 # Volcano Plot, this does the actual plotting
 data3 %>%
   plot_volcano(.,
@@ -214,8 +143,6 @@ ggsave("", width = 10, height = 7, dpi = 300)
 #protein abundance trends
 data3 %>%
   filter(FDR < 0.05) %>% # ???
-  #filter(abs(`Active-Osmobiotes_FC`) >= 1, 
-  #abs(`Osmobiotes-1 hr_FC`) >= 1) %>%
   plot_hclust(., group, k = 6) +
   theme_custom() +
   theme(
